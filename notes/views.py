@@ -2,31 +2,22 @@ from django.http import HttpResponse, Http404
 from django.shortcuts import render, redirect
 from django.contrib.auth.hashers import make_password, check_password
 from django.contrib.auth import authenticate, login
+from django.contrib.auth.models import User
 
-from .models import User, Note
+from .models import Note
 
 
-def login(request):
+def login_view(request):
     if request.method == 'GET':
         return render(request, 'notes/login.html')
 
     elif request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
-        test_user = authenticate(request, username=username, password=password)
-        print('----------------------------------> ', test_user)
-        if username is None:
-            raise Http404("Enter username.")
-        if password is None:
-            raise Http404("Enter password.")
-
-        user = User.objects.get(username=username)
-        if user is None:
-            raise Http404("The user was not found")
-
-        isValid = check_password(password, user.password)
-        if isValid:
-            return redirect('dashboard/' + user.username)
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            return redirect('dashboard')
         else:
             return redirect('login')
 
@@ -40,18 +31,20 @@ def signup(request):
         password = request.POST.get('password')
         if username is None or password is None:
             raise Http404("Username or password is missing.")
-        hashed_password = make_password(password, salt=None, hasher='default')
-        user = User.objects.create(username=username, password=hashed_password)
-        return redirect('dashboard/' + str(user.username))
+        user = User.objects.create_user(username, '', password)
+        login(request, user)      
+        return redirect('dashboard')
 
 
-def dashboard(request, username):
+def dashboard(request):
     context = {}
-    user = User.objects.get(username=username)
-    notes = Note.objects.filter(user_id=user.id)
-    context['user'] = user.username
-    context['notes'] = notes
-    return render(request, 'notes/dashboard.html', context)
+    if request.user.is_authenticated:
+        notes = Note.objects.filter(user_id=request.user.id)
+        context['user'] = request.user.username
+        context['notes'] = notes
+        return render(request, 'notes/dashboard.html', context)
+    else:
+        return redirect('login')
 
 def noteModify(request):
     if request.method == 'POST':
