@@ -1,0 +1,20 @@
+<html>
+    <head></head>
+    <body>
+        <form action={{note.id}} method="POST">
+            {% csrf_token %}
+            <label>title:</label>
+            <input name="title" value={{note.title}}>
+            <label>content:</label>
+            <textarea name="content">{{ note.content }}</textarea>
+            <button type="submit">Save</button>
+            
+        </form>
+        <form action="http://127.0.0.1:8000/dashboard/marko" method="GET">
+            <button type="submit">Cancel</button>
+        </form>
+        <form action="http://127.0.0.1:8000/dashboard/marko" method="DELETE">
+            <button>Delete</button>
+        </form>
+    </body>
+</html>
