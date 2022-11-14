@@ -4,12 +4,12 @@
     <body>
         <h2>{{user}}'s notes</h2>
         <div>
-            <form action='/note' method="POST">
+            <form action="/note" method="POST">
                 {% csrf_token %}
                 <input class='button' type='submit' value="Create a new note"></button>
             </form>
             {% for note in notes %}
-            <h2>{{note.title}}</h2>
+            <h2><a href="note/{{note.id}}">{{note.title|default:"Untitled note"}}</a></h2>
             <p>{{note.content}}</p>
             {% endfor %}
         </div>

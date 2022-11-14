@@ -1,6 +1,5 @@
-from django.http import HttpResponse, Http404
+from django.http import HttpResponse, Http404, HttpResponseNotAllowed
 from django.shortcuts import render, redirect
-from django.contrib.auth.hashers import make_password, check_password
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.models import User
 
@@ -39,35 +38,52 @@ def signup(request):
 def dashboard(request):
     context = {}
     if request.user.is_authenticated:
-        notes = Note.objects.filter(user_id=request.user.id)
+        notes = list(request.user.note_set.all())
         context['user'] = request.user.username
         context['notes'] = notes
         return render(request, 'notes/dashboard.html', context)
     else:
         return redirect('login')
 
-def noteModify(request):
+def note_create(request):
     if request.method == 'POST':
-        user = User.objects.get(username='marko')
-        note = Note.objects.create(user=user, title='', content='')
-        return redirect('/note/' + str(note.id))
-    
+        if request.user.is_authenticated:
+            user = User.objects.get(username=request.user.username)
+            note = Note.objects.create(user=user, title='', content='')
+            return redirect('/note/' + str(note.id))
+        else:
+            return HttpResponse('User is not authenticated', status = 401)            
+    else:
+        return HttpResponseNotAllowed(['POST'])
+
+def note_delete(request, note_id):
+    if request.method == 'POST':
+        if request.user.is_authenticated:
+            note = Note.objects.get(id=note_id)
+            note.delete()
+            return redirect('dashboard')
+        else:
+            return HttpResponse('User is not authenticated', status = 401)  
+    else:
+        return HttpResponseNotAllowed(['POST'])
 
 def note(request, note_id):
     context = {}
-    if request.method == 'GET':
+    if request.method == 'POST':
+        if request.user.is_authenticated:
+            note = Note.objects.get(id=note_id)
+            if note is None:
+                return Http404("The note couldn't be found.")
+            note.title = request.POST.get('title', note.title)
+            note.content = request.POST.get('content', note.content)
+            note.save()
+            return redirect('/dashboard') #Redirect was adding the string to my URL, so it went from note/id to note/note/id
+        else:
+            return HttpResponse('User is not authenticated', status = 401)
+    elif request.method == 'GET':
         note = Note.objects.get(id=note_id)
         context['note'] = note
         return render(request, 'notes/note.html', context)
-    elif request.method == 'POST':
-        note = Note.objects.get(id=note_id)
-        if note is None:
-            return HttpResponse("Couldn't update the note, sorry.") #Is there a 500 error way?
-        note.title = request.POST.get('title', note.title)
-        note.content = request.POST.get('content', note.content)
-        note.save()
-        return redirect('http://127.0.0.1:8000/note/' + str(note.id)) #Redirect was adding the string to my URL, so it went from note/id to note/note/id
-    elif request.method == 'DELETE':
-        note = Note.objects.get(id=note_id)
-        note.delete()
-        return redirect('dashboard/marko')
+    else:
+        return HttpResponseNotAllowed(['POST', 'GET'])
+        
