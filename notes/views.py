@@ -81,9 +81,12 @@ def note(request, note_id):
         else:
             return HttpResponse('User is not authenticated', status = 401)
     elif request.method == 'GET':
-        note = Note.objects.get(id=note_id)
-        context['note'] = note
-        return render(request, 'notes/note.html', context)
+        if request.user.is_authenticated:
+            note = Note.objects.get(id=note_id)
+            context['note'] = note
+            return render(request, 'notes/note.html', context)
+        else:
+            return HttpResponse('User is not authenticated', status = 401)
     else:
         return HttpResponseNotAllowed(['POST', 'GET'])
         
